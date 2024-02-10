@@ -3,15 +3,15 @@
 #include <iostream>
 
 const std::map<std::string, Parser::ParseFunc> Parser::_lineType = {
+	{"vt", &Parser::_parseTexture},
+	{"vn", &Parser::_parseNormals},
+	{"mtllib", &Parser::_parseMaterial},
+	{"usemtl", &Parser::_useMaterial},
 	{"o", &Parser::_parseName},
 	{"g", &Parser::_parseGroup},
 	{"#", &Parser::_parseComment},
 	{"v", &Parser::_parseVertex},
-	{"vt", &Parser::_parseTexture},
-	{"vn", &Parser::_parseNormals},
 	{"f", &Parser::_parseFace},
-	{"mtllib", &Parser::_parseMaterial},
-	{"usemtl", &Parser::_useMaterial},
 	{"s", &Parser::_parseShading},
 };
 
@@ -100,9 +100,14 @@ void	Parser::parseObj(Scene &scene) {
 }
 
 void	Parser::_parseLine(std::string line, Scene &scene) {
+	std::vector<std::string>	token;
+
+	token = _tokenize(line, " ");
 	for (auto it = _lineType.begin(); it != _lineType.end(); it++) {
-		if (line.starts_with(it->first)) {
+		if (line.starts_with(it->first) && token[0].length() == it->first.length()) {
+		std::cout << it->first << std::endl; 
 			(this->*(_lineType.find(it->first)->second))(line, scene);
+			break;
 		}
 	}
 }
