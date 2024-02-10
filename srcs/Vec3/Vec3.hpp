@@ -2,12 +2,12 @@
 
 class Vec3 {
   private:
+    
+  public:
     double _x;
     double _y;
     double _z;
     double _w;
-    
-  public:
 
     Vec3();
     Vec3(double x, double y, double z);

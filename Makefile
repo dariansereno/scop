@@ -5,7 +5,7 @@ NAME = scop
 CXX ?= g++
 CXXFLAGS = -std=c++2b -g3 -o2 #-Wall -Wextra -Werror 
 
-LDFLAGS =  -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr 
+LDFLAGS =  -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr
 
 DIR_SRC = srcs
 DIR_OBJ = .obj
