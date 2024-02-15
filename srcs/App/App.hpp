@@ -22,6 +22,8 @@
 #include <Scene/Scene.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 //#include <stb_image.h>
+#include <Inputs/Inputs.hpp>
+    #include <filesystem>
 
 #include <chrono>
 
@@ -55,7 +57,7 @@ struct Vertex {
 
 	Vertex(Vec3 src) {
 		pos = {src._x, src._y, src._z};
-		color = {1.0f, 0.0f, 0.0f};
+		color = {1.0f, 1.0f, 0.0f};
 	}
 
     static VkVertexInputBindingDescription getBindingDescription() {
@@ -180,7 +182,10 @@ private:
     VkDeviceMemory textureImageMemory;
 
 	std::vector<Vertex> vertices {};
-	std::vector<int> indices {};
+	std::vector<uint32_t> indices {};
+
+    glm::vec3 camPos = { 5.f,2.f,5.f };
+
 
 
     void initWindow() {
@@ -250,6 +255,10 @@ private:
 		scene.printVertex();
 		for (auto &vert :tmp_vertices) {
 			vertices.push_back(Vertex(*vert));
+		}
+
+		for (auto & index: indices) {
+			std::cout << index << std::endl;
 		}
 	}
 
@@ -576,10 +585,9 @@ private:
             throw std::runtime_error("failed to create descriptor set layout!");
         }
     }
-
     void createGraphicsPipeline() {
-        auto vertShaderCode = readFile("srcs/shaders/vert.spv");
-        auto fragShaderCode = readFile("srcs/shaders/frag.spv");
+        auto vertShaderCode = readFile("../srcs/shaders/vert.spv");
+        auto fragShaderCode = readFile("../srcs/shaders/frag.spv");
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -967,7 +975,7 @@ private:
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 
         VkViewport viewport{};
@@ -1169,7 +1177,6 @@ private:
             SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
             swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
         }
-        std::cout << std::boolalpha << "indices : " << indices.isComplete() << "extension support : " << extensionsSupported << " szapchain : " << swapChainAdequate << std::endl;
         return indices.isComplete() && extensionsSupported && swapChainAdequate;
     }
 
@@ -1249,7 +1256,6 @@ private:
         for (const char* layerName : validationLayers) {
             bool layerFound = false;
             for (const auto& layerProperties : availableLayers) {
-                std::cout << layerProperties.layerName << std::endl;
                 if (strcmp(layerName, layerProperties.layerName) == 0) {
                     layerFound = true;
                     break;
@@ -1309,8 +1315,8 @@ private:
         float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
         UniformBufferObject ubo{};
-        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, .0f, 1.0f));
+        ubo.view = glm::lookAt(camPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
         ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
         ubo.proj[1][1] *= -1;
         memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));

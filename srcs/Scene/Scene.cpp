@@ -38,7 +38,7 @@ void Scene::addIndices(std::string indice) {
 	this->_indices.push_back(stoi(indice) - 1);
 }
 
-std::vector<int> Scene::getIndices() {
+std::vector<uint32_t> Scene::getIndices() {
 	return _indices;
 }
 

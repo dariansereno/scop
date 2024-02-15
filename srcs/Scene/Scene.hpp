@@ -16,7 +16,7 @@ class Scene {
 		bool					_shading;
 
 		//TEMP
-		std::vector<int>		_indices;
+		std::vector<uint32_t>		_indices;
 
 	public:
 		void	setName(std::string name);
@@ -29,6 +29,6 @@ class Scene {
 		void	addIndices(std::string indice);
 
 		void				printVertex();
-		std::vector<int> 	getIndices();
+		std::vector<uint32_t> 	getIndices();
 		std::vector<Vec3*>	getVertex();
 };

@@ -138,12 +138,20 @@ void	Parser::_parseShading(std::string line, Scene &scene) {
 }
 
 void	Parser::_parseFace(std::string line, Scene &scene) {
-	std::vector<std::string>	token;
+	std::vector<std::string>	tokens = _tokenize(line, " ");
+	int n = tokens.size() - 1;
 
-	token = _tokenize(line, " ");
-	for (auto it = token.begin() + 1; it != token.end(); it++) {
-		std::vector<std::string> cuttedParts = _tokenize(*it, "/");
+	// iterate 1 time, and more if more than 3 vertices vertices.
+	for (int j = 0; j < n - 2; j++) {
+		std::vector<std::string> cuttedParts = _tokenize(tokens[1], "/");
 		scene.addIndices(cuttedParts[0]);
+		//add first vertice
+
+		for (int i = 1; i < 3 && i <= n; i++) {
+			// add the next 2 vertices
+			cuttedParts = _tokenize(tokens[i + j + 1], "/");
+			scene.addIndices(cuttedParts[0]);
+		}
 	}
 }
 
