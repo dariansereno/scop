@@ -27,12 +27,62 @@ void Input::setIsKeyDown(int key, bool isDown) {
 		_keys[key] = isDown;
 }
 
-void Input::setupInput(GLFWwindow * window) {
-	glfwSetKeyCallback(window, Input::callback);
+void Input::setupInput(Input *instance, GLFWwindow * window) {
+	glfwSetKeyCallback(window, Input::callbackKey);
+	glfwSetMouseButtonCallback(window, Input::callbackMouse);
+	glfwSetCursorPosCallback(window, Input::callbackCursor);
+	glfwSetWindowUserPointer(window, instance);
 }
 
-void Input::callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
+void Input::callbackKey(GLFWwindow * window, int key, int scancode, int action, int mods) {
 	for (auto &instance: _instances ) {
 		instance->setIsKeyDown(key, action != GLFW_RELEASE);
 	}
+}
+
+void Input::callbackMouse(GLFWwindow* window, int button, int action, int mods) {
+    Input* input = static_cast<Input*>(glfwGetWindowUserPointer(window));
+
+    if (input) {
+        input->setIsMouseButtonDown(button, action != GLFW_RELEASE);
+    }
+}
+
+void Input::callbackCursor(GLFWwindow* window, double xpos, double ypos) {
+    Input* input = static_cast<Input*>(glfwGetWindowUserPointer(window));
+
+    if (input) {
+        input->_mouseX = xpos;
+        input->_mouseY = ypos;
+        input->_prevMouseX = input->_mouseX;
+        input->_prevMouseY = input->_mouseY;
+    }
+}
+
+bool Input::isMouseButtonDown(int button) {
+    auto it = _mouseButtons.find(button);
+    if (it != _mouseButtons.end()) {
+        return it->second;
+    }
+    return false;
+}
+
+void Input::setIsMouseButtonDown(int button, bool isDown) {
+    _mouseButtons[button] = isDown;
+}
+
+double Input::getMouseX() {
+    return _mouseX;
+}
+
+double Input::getMouseY() {
+    return _mouseY;
+}
+
+double Input::getMouseDeltaX() {
+    return _mouseX - _prevMouseX;
+}
+
+double Input::getMouseDeltaY() {
+    return _mouseY - _prevMouseY;
 }

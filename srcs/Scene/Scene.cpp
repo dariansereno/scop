@@ -45,3 +45,7 @@ std::vector<uint32_t> Scene::getIndices() {
 std::vector<Vec3*>	Scene::getVertex() {
 	return _vertex;
 }
+
+std::map<std::string, Material*> Scene::getMaterials() {
+	return _materials;
+}

@@ -55,6 +55,7 @@ class Parser {
 		~Parser(void);
 
 		void	parseObj(Scene &scene);
+		void	parseMaterial(Scene &scene);
 
 		class FileError : public std::exception{
 			public:

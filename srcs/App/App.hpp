@@ -12,7 +12,6 @@
 #include <limits>
 #include <optional>
 #include <set>
-#include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 #include <array>
 #define GLM_FORCE_RADIAN
@@ -20,6 +19,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <Vec3/Vec3.hpp>
 #include <Scene/Scene.hpp>
+#include <Camera/Camera.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 //#include <stb_image.h>
 #include <Inputs/Inputs.hpp>
@@ -154,6 +154,7 @@ private:
 
     VkRenderPass renderPass;
     VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorSetLayout materialDescriptorSetLayout;
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
 
@@ -171,12 +172,17 @@ private:
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
 
+    VkBuffer materialBuffer;
+    VkDeviceMemory materialBufferMemory;
+    void * materialBufferMapped;
+
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformsBuffersMemory;
     std::vector<void *> uniformBuffersMapped;
 
     VkDescriptorPool descriptorPool;
     std::vector<VkDescriptorSet> descriptorSets;
+    VkDescriptorSet materialDescriptorSets;
 
     VkImage textureImage;
     VkDeviceMemory textureImageMemory;
@@ -184,9 +190,10 @@ private:
 	std::vector<Vertex> vertices {};
 	std::vector<uint32_t> indices {};
 
-    glm::vec3 camPos = { 5.f,2.f,5.f };
+    Camera mainCamera;
 
-
+    std::vector<int> keys = {GLFW_KEY_D, GLFW_KEY_Q};
+    Input inputHandler = Input(keys);
 
     void initWindow() {
         glfwInit();
@@ -222,16 +229,24 @@ private:
         createVertexBuffer();
         createIndexbuffer();
         createUniformsBuffer();
+        createMaterialBuffer(scene);
         createDescriptorPool();
         createDescriptorSets();
+        std::cout << "salut" << std::endl;
+        createMaterialDescriptorSets();
+        std::cout << "test" << std::endl;
         createCommandBuffers();
         createSyncObjects();
     }
 
+
     void mainLoop() {
+        inputHandler.setupInput(&inputHandler, window);
+
         while (!glfwWindowShouldClose(window)) {
             glfwPollEvents();
             drawFrame();
+            mainCamera.processInput(&inputHandler);
         }
 
         vkDeviceWaitIdle(device);
@@ -584,6 +599,22 @@ private:
         if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create descriptor set layout!");
         }
+
+        VkDescriptorSetLayoutBinding materialLayoutBinding{};
+        materialLayoutBinding.binding = 1;
+        materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        materialLayoutBinding.descriptorCount = 1;
+        materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        VkDescriptorSetLayoutCreateInfo materialLayoutInfo{};
+        materialLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        materialLayoutInfo.bindingCount = 1;
+        materialLayoutInfo.pBindings = &materialLayoutBinding;
+
+        if (vkCreateDescriptorSetLayout(device, &materialLayoutInfo, nullptr, &materialDescriptorSetLayout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor set layout!");
+        }
+
     }
     void createGraphicsPipeline() {
         auto vertShaderCode = readFile("../srcs/shaders/vert.spv");
@@ -673,13 +704,16 @@ private:
         VkPipelineDynamicStateCreateInfo dynamicState{};
         dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-        dynamicState.pDynamicStates = dynamicStates.data();        
+        dynamicState.pDynamicStates = dynamicStates.data();      
+
+        std::array<VkDescriptorSetLayout,  2> setLayouts = {descriptorSetLayout, materialDescriptorSetLayout};  
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());;
+        pipelineLayoutInfo.pSetLayouts = setLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = 0;
+        
 
         if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create pipeline layout!");
@@ -764,6 +798,20 @@ private:
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformsBuffersMemory[i]);
             vkMapMemory(device, uniformsBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
         }
+    }
+
+    void createMaterialBuffer(Scene scene) {
+        VkDeviceSize bufferSize = sizeof(MaterialProperties);
+
+        createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        materialBuffer, materialBufferMemory);
+
+        void *data;
+        auto materials = scene.getMaterials();
+        MaterialProperties materialData = materials.begin()->second->getProperties();
+        vkMapMemory(device, materialBufferMemory, 0, sizeof(materialData), 0, &data);
+        memcpy(data, &materialData, sizeof(materialData));
+        vkUnmapMemory(device, materialBufferMemory);
     }
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -993,6 +1041,7 @@ private:
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &materialDescriptorSets, 0, nullptr);
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
@@ -1308,15 +1357,14 @@ private:
     }
 
     void updateUniformBuffer(uint32_t currentImage) {
-        static auto startTime = std::chrono::high_resolution_clock::now();
+        static auto startTime = glfwGetTime();
 
-
-        auto currentTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = glfwGetTime();
         float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, .0f, 1.0f));
-        ubo.view = glm::lookAt(camPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.view = glm::lookAt(glm::vec3(5.0f, 1.f, 5.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
         ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
         ubo.proj[1][1] *= -1;
         memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
@@ -1325,13 +1373,13 @@ private:
     void createDescriptorPool() {
         VkDescriptorPoolSize poolSize{};
         poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 1);
         
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = 1;
         poolInfo.pPoolSizes = &poolSize;
-        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 1);
 
         if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create descriptor pool!");
@@ -1368,6 +1416,35 @@ private:
 
             vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
         }
+    }
+
+    void createMaterialDescriptorSets() {
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = descriptorPool;
+        allocInfo.descriptorSetCount = 1;
+        allocInfo.pSetLayouts = &materialDescriptorSetLayout;
+
+        if (vkAllocateDescriptorSets(device, &allocInfo, &materialDescriptorSets) != VK_SUCCESS)
+            throw std::runtime_error("failed to allocate descriptor sets!");
+        
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = materialBuffer;
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(MaterialProperties);
+
+        VkWriteDescriptorSet descriptorWrite{};
+        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.dstSet = materialDescriptorSets;
+        descriptorWrite.dstBinding = 1;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pBufferInfo = &bufferInfo;
+
+        std::cout << "avant" << std::endl;
+        vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+        std::cout << "apres" << std::endl;
     }
 
     VkCommandBuffer beginSingleTimeCommands() {

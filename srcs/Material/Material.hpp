@@ -3,6 +3,17 @@
 #include <fstream>
 #include <iostream>
 #include "Vec3.hpp"
+#include <glm/glm.hpp>
+
+struct MaterialProperties {
+    glm::vec3 ambientColor;
+    glm::vec3 diffuseColor;
+    glm::vec3 specularColor;
+    float refraction;
+    int illumination;
+    float shininess;
+    float transparency;
+};
 
 class Material {
     private:
@@ -37,4 +48,6 @@ class Material {
 		std::string	nextLine(void);
 		void		setPath(std::string path);
 		void		print();
+
+		MaterialProperties getProperties();
 };

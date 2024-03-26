@@ -46,10 +46,27 @@ void Material::print() {
 	std::cout << "refraction: " <<_refraction << std::endl;
 	std::cout << "illumination: " << _illumination << std::endl;
 	std::cout << "shininess: " << _shininess << std::endl;
+	std::cout << "ambiant color : " << std::endl;
 	_ambiantColor->print();
+	std::cout << "diffuse color : " << std::endl;
 	_diffuseColor->print();
+	std::cout << "specular color : " << std::endl;
 	_specularColor->print();
 	std::cout << "transparency: " << _transparency << std::endl << std::endl;
+}
+
+MaterialProperties Material::getProperties() {
+	return (
+		(MaterialProperties) {
+			glm::vec3(_ambiantColor->_x, _ambiantColor->_y, _ambiantColor->_z),
+			glm::vec3(_diffuseColor->_x, _diffuseColor->_y, _diffuseColor->_z),
+			glm::vec3(_specularColor->_x, _specularColor->_y, _specularColor->_z),
+			static_cast<float>(_refraction),
+			_illumination,
+			static_cast<float>(_shininess),
+			static_cast<float>(_transparency)
+		}
+	);
 }
 
 /* ------------------------------ getter/setter ----------------------------- */

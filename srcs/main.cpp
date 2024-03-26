@@ -11,9 +11,14 @@ int main(int ac, char **av) {
 	Parser	parser(av[1]);
 
 	parser.parseObj(scene);
+	parser.parseMaterial(scene);
 	auto indices = scene.getIndices();
+	auto materials = scene.getMaterials();
 	for (auto it = indices.begin(); it != indices.end(); it++) {
 		std::cout << *it << std::endl;
+	}
+	for (auto it = materials.begin(); it != materials.end(); it++) {
+		(*it).second->print();
 	}
 	 App app;
 

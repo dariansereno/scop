@@ -99,6 +99,15 @@ void	Parser::parseObj(Scene &scene) {
 	}
 }
 
+void Parser::parseMaterial(Scene &scene) {
+	std::string line = _nextLine();
+
+	while (!_file.eof()) {
+		_parseMaterial(line, scene);
+		line = _nextLine();
+	}
+}
+
 void	Parser::_parseLine(std::string line, Scene &scene) {
 	std::vector<std::string>	token;
 
@@ -168,6 +177,7 @@ void	Parser::_parseMaterial(std::string line, Scene &scene) {
 	while (material->isFileEmpty()) {
 		for (auto it = _materialLineType.begin(); it != _materialLineType.end(); it++) {
 			if (lineMaterial.starts_with(it->first)) {
+				std::cout << "--> " << it->first << std::endl;
 				(this->*(_materialLineType.find(it->first)->second))(lineMaterial, material);
 			}
 		}

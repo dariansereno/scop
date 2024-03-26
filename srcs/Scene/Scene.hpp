@@ -31,4 +31,5 @@ class Scene {
 		void				printVertex();
 		std::vector<uint32_t> 	getIndices();
 		std::vector<Vec3*>	getVertex();
+		std::map<std::string, Material*> getMaterials();
 };
